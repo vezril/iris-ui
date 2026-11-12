@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   formatAge,
+  formatDuration,
   indexIntegrity,
   parseGauges,
   readBridgeMetrics,
   RESCAN_INTERVAL_MS,
+  scanDurationMs,
   scanFreshness,
   type BridgeMetrics,
 } from "@/lib/iris";
@@ -185,6 +187,45 @@ describe("scanFreshness", () => {
   it("projects the next rescan from the last completion", () => {
     const freshness = scanFreshness(scan(0), observedAt);
     expect(freshness.nextDueAt?.getTime()).toBe(observedAt.getTime() + RESCAN_INTERVAL_MS);
+  });
+});
+
+describe("scanDurationMs", () => {
+  const scan = (startedAt: string, finishedAt: string) => ({
+    kind: "full",
+    startedAt,
+    finishedAt,
+    notesSeen: 1,
+    created: 0,
+    changed: 0,
+    deleted: 0,
+    errors: 0,
+  });
+
+  it("measures the gap the service's two timestamps describe", () => {
+    expect(scanDurationMs(scan("2026-11-05T12:00:00Z", "2026-11-05T12:01:34Z"))).toBe(94_000);
+  });
+
+  it("is unknown rather than zero when the timestamps are unparseable", () => {
+    expect(scanDurationMs(scan("not a date", "2026-11-05T12:00:00Z"))).toBeNull();
+  });
+
+  /** A negative duration would mean the service disagreed with itself; don't tidy that away. */
+  it("is unknown rather than negative when finished precedes started", () => {
+    expect(scanDurationMs(scan("2026-11-05T12:01:00Z", "2026-11-05T12:00:00Z"))).toBeNull();
+  });
+});
+
+describe("formatDuration", () => {
+  it.each([
+    [250, "250ms"],
+    [1_500, "1.5s"],
+    [9_900, "9.9s"],
+    [45_000, "45s"],
+    [94_000, "1m"],
+    [3 * 3_600_000, "3h"],
+  ])("formats %ims as %s", (ms, expected) => {
+    expect(formatDuration(ms)).toBe(expected);
   });
 });
 

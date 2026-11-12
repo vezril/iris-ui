@@ -11,9 +11,12 @@ const spyFetch = (response: () => Response) =>
   vi.fn(async (_url: string | URL | Request, _init?: RequestInit) => response());
 
 describe("the allowlist", () => {
-  it.each([["health"], ["metrics"], ["tags"], ["links/unresolved"]])("allows %s", (path) => {
-    expect(upstreamPath(path.split("/"))).toBe(`/${path}`);
-  });
+  it.each([["health"], ["metrics"], ["scans"], ["tags"], ["links/unresolved"]])(
+    "allows %s",
+    (path) => {
+      expect(upstreamPath(path.split("/"))).toBe(`/${path}`);
+    },
+  );
 
   /**
    * The exposure guard, and the reason this file exists. iris-service is unauthenticated and these
@@ -36,6 +39,13 @@ describe("the allowlist", () => {
     expect(upstreamPath(["metrics", "..", "notes"])).toBeNull();
     expect(upstreamPath(["healthz"])).toBeNull();
     expect(upstreamPath(["tags", "x"])).toBeNull();
+    expect(upstreamPath(["scans", "1"])).toBeNull();
+  });
+
+  it("does not forward /scans's limit — the console takes the service default", async () => {
+    const fetchFn = spyFetch(() => new Response("[]", { status: 200 }));
+    await proxyGet(["scans"], config(fetchFn as unknown as typeof fetch));
+    expect(fetchFn.mock.calls[0]?.[0]).toBe("http://iris:8080/scans");
   });
 });
 

@@ -18,6 +18,23 @@ export type TagCount = { tag: string; notes: number };
 /** `GET /links/unresolved` (UnresolvedTarget) — a `[[link]]` pointing at no indexed note. */
 export type UnresolvedTarget = { rawTarget: string; referencingNotes: number };
 
+/**
+ * `GET /scans` (ScanRecord) — one completed scan. Timestamps are ISO-8601 strings on the wire.
+ *
+ * `kind` is `full` or `watch` in iris-service today, but it is typed as a plain string: an unknown
+ * kind must render as itself rather than crash or be silently dropped.
+ */
+export type ScanRecord = {
+  kind: string;
+  startedAt: string;
+  finishedAt: string;
+  notesSeen: number;
+  created: number;
+  changed: number;
+  deleted: number;
+  errors: number;
+};
+
 // ---------------------------------------------------------------- Prometheus text
 
 /**
@@ -195,6 +212,26 @@ export function formatAge(ms: number): string {
   const days = Math.floor(ms / DAY);
   const hours = Math.floor((ms % DAY) / HOUR);
   return hours === 0 ? `${days}d` : `${days}d ${hours}h`;
+}
+
+/**
+ * How long a scan took, or `null` if either timestamp is unparseable. The service sends both ends
+ * precisely so this is computable; a negative result would mean the service disagreed with itself,
+ * so it is reported as unknown rather than as a tidy zero.
+ */
+export function scanDurationMs(scan: ScanRecord): number | null {
+  const started = Date.parse(scan.startedAt);
+  const finished = Date.parse(scan.finishedAt);
+  if (!Number.isFinite(started) || !Number.isFinite(finished)) return null;
+  const elapsed = finished - started;
+  return elapsed < 0 ? null : elapsed;
+}
+
+/** Sub-minute precision, because most scans finish in seconds — `formatAge` would say "just now". */
+export function formatDuration(ms: number): string {
+  if (ms < 1_000) return `${ms}ms`;
+  if (ms < 60_000) return `${(ms / 1_000).toFixed(ms < 10_000 ? 1 : 0)}s`;
+  return formatAge(ms);
 }
 
 /** The vault's own zone, so a timestamp reads the way Calvin's notes do. */

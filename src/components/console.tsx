@@ -3,7 +3,7 @@
 import { DatabaseZap, RefreshCw } from "lucide-react";
 import { FreshnessCard, VaultFreshnessCard } from "@/components/freshness-card";
 import { IntegrityCard } from "@/components/integrity-card";
-import { ScanOutcomeCard } from "@/components/scan-outcome-card";
+import { ScanHistoryCard } from "@/components/scan-history-card";
 import { ErrorState } from "@/components/states";
 import { TagCountsCard } from "@/components/tag-counts-card";
 import { UnresolvedLinksCard } from "@/components/unresolved-links-card";
@@ -106,7 +106,9 @@ export function Console() {
             <FreshnessCard metrics={metrics} />
           </div>
 
-          <ScanOutcomeCard metrics={metrics} />
+          {/* Replaces a last-scan-outcome card built from the gauges: its single row is the head
+              of this list, and iris-service tests that the two surfaces agree on which that is. */}
+          <ScanHistoryCard />
 
           <div className="grid gap-4 lg:grid-cols-2">
             <UnresolvedLinksCard />
