@@ -31,6 +31,27 @@ jobs:
       - name: Verify NEXT_PUBLIC_IRIS_API_BASE landed in the browser bundle
         run: npm run verify:bundle
 
+  # The release workflow publishes an image built from this Dockerfile. Build it here, on every PR,
+  # so a broken Dockerfile is a red PR rather than a discovery made mid-release. Never pushed —
+  # this job has no registry credentials and wants none.
+  image:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          # Same value the release bakes. The builder stage runs scripts/verify-api-base.sh, so if
+          # the bake ever silently stops landing in the browser chunks, this build fails.
+          build-args: |
+            NEXT_PUBLIC_IRIS_API_BASE=/api/iris
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   chart:
     name: Helm chart
     runs-on: ubuntu-latest
