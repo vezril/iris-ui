@@ -1,0 +1,13 @@
+# Reference only. The codex session owns deploys (apps/iris-ui/ in codex); there is no Flux on the
+# cluster today, and real deploys are `helm upgrade -f <mirrored-values>` from the TAGGED chart —
+# never bare `--set`. iris-ui is PUBLIC, so no git-auth secretRef is needed.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: iris-ui
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: https://github.com/vezril/iris-ui
+  ref:
+    branch: main

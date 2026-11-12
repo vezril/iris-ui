@@ -1,0 +1,32 @@
+# Reference only, mirroring the codex apps/<name>/ HelmRelease shape. The codex session owns the
+# real one (and the image pin: it records what is DEPLOYED, not what is newest).
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: iris-ui
+  namespace: iris-ui
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: deploy/charts/iris-ui        # path within the iris-ui repo
+      sourceRef:
+        kind: GitRepository
+        name: iris-ui
+        namespace: flux-system
+  values:
+    image:
+      repository: calvinference/irisui    # Docker Hub account, NOT the GitHub org
+      tag: "0.1.0"
+    replicaCount: 1                       # single-node cluster
+    iris:
+      # iris-service REST base — server-side (BFF) only; the browser talks to /api/iris.
+      serviceUrl: http://iris.iris.svc.cluster.local:8080
+    ingress:
+      enabled: false          # opt in deliberately
+      host: ""                # e.g. iris.tailscale (reach via Traefik NodePort :61642, never :80)
+      # DELIBERATELY EMPTY, and load-bearing: no IngressClass exists on this cluster and an empty
+      # ingressClassName is invalid. The template omits the field when empty.
+      className: ""
+      clusterIssuer: ""       # no cert-manager on the cluster
+      tlsSecretName: ""
