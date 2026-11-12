@@ -1,0 +1,46 @@
+# Single-node cluster: a second replica buys nothing.
+replicaCount: 1
+
+image:
+  # Docker Hub account is `calvinference`, NOT the GitHub org.
+  repository: calvinference/irisui
+  # Empty means the chart's appVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+iris:
+  # iris-service REST base — SERVER-SIDE only (the BFF). The browser never sees it and never calls
+  # it; it talks to this app's /api/iris. NEXT_PUBLIC_* is baked into the image at build time, so
+  # there is deliberately no value for it here.
+  #
+  # The service is `iris` in namespace `iris` on port 8080 (codex/charts/iris/templates/service.yaml
+  # + values.yaml).
+  serviceUrl: http://iris.iris.svc.cluster.local:8080
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+ingress:
+  # Off by default. The console itself shows no note content, but it fronts a service whose API is
+  # unauthenticated and serves the full plaintext of the vault — exposing it is a deliberate act.
+  enabled: false
+  # DELIBERATELY EMPTY and load-bearing: an empty ingressClassName is RFC-1123-invalid and k8s
+  # rejects the object; the template omits the field when this is empty. The cluster has no
+  # IngressClass resource and k3s's Traefik silently ignores named classes.
+  className: ""
+  host: ""
+  path: /
+  annotations: {}
+  # No cert-manager on the cluster: both stay empty or the template would reference a Secret
+  # nothing issues.
+  clusterIssuer: ""
+  tlsSecretName: ""
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 256Mi

@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+/*
+ * Shared constellation base (UX-STANDARDS §1) — dark-only. There is no light mode and no
+ * per-service radius, font or spacing; do not add them.
+ *
+ * NOTE: dionysus-planner's globals.css (the reference to copy wholesale) was not available when
+ * this was scaffolded, so this block is rebuilt from the §1 token table, matching themis-ui.
+ * Tokens the table does not give (card/popover/secondary foregrounds, chart-2..5, the sidebar
+ * surfaces) are derived from the same hue-280 ramp. Reconcile against the reference when it is
+ * to hand.
+ */
+:root {
+  color-scheme: dark;
+
+  --background: oklch(0.13 0.02 280);
+  --foreground: oklch(0.93 0.01 280);
+  --card: oklch(0.17 0.03 280);
+  --card-foreground: oklch(0.93 0.01 280);
+  --popover: oklch(0.17 0.03 280);
+  --popover-foreground: oklch(0.93 0.01 280);
+  --secondary: oklch(0.22 0.04 280);
+  --secondary-foreground: oklch(0.93 0.01 280);
+  --muted: oklch(0.2 0.03 280);
+  --muted-foreground: oklch(0.65 0.03 280);
+  --accent: oklch(0.22 0.04 280);
+  --accent-foreground: oklch(0.93 0.01 280);
+  --border: oklch(0.28 0.04 280);
+  --input: oklch(0.28 0.04 280);
+  --destructive: oklch(0.62 0.24 25);
+  --destructive-foreground: oklch(0.97 0.01 280);
+  --radius: 0.15rem;
+
+  /* Status colours are shared, never per-service and never an accent. */
+  --success: oklch(0.8 0.25 145);
+  --warning: oklch(0.8 0.16 85);
+
+  /* Family cyan stays the linework/chart identity whatever the service accent is. */
+  --family-cyan: oklch(0.85 0.2 195);
+  --chart-1: oklch(0.85 0.2 195);
+  --chart-2: oklch(0.7 0.28 340);
+  --chart-3: oklch(0.8 0.25 145);
+  --chart-4: oklch(0.8 0.16 85);
+  --chart-5: oklch(0.7 0.22 35);
+
+  --sidebar: oklch(0.15 0.025 280);
+  --sidebar-foreground: oklch(0.93 0.01 280);
+  --sidebar-primary-foreground: oklch(0.15 0.02 280);
+  --sidebar-accent: oklch(0.22 0.04 280);
+  --sidebar-accent-foreground: oklch(0.93 0.01 280);
+  --sidebar-border: oklch(0.28 0.04 280);
+}
+
+/*
+ * ACCENT — the only per-service block, exactly five values (UX-STANDARDS §3 step 2).
+ *
+ * TODO(accent): PROPOSED, NOT RATIFIED. Iris has no row in the UX-STANDARDS §2 accent table, and
+ * that table lives in the Codex session's tree. `oklch(0.78 0.16 305)` ("prismatic lavender") is
+ * keyed to the dominant violet in codex/docs/brand/iris.png; the reasoning and the rejected
+ * alternatives are in docs/relay-codex-iris-ui.md, still queued to Codex. Nothing outside this
+ * block names the accent, so ratifying or replacing it is a five-value edit and no component
+ * changes. --primary-foreground is the dark one per §2 (accent L 0.78 >= 0.7).
+ */
+:root {
+  --primary: oklch(0.78 0.16 305);
+  --primary-foreground: oklch(0.15 0.02 280);
+  --ring: oklch(0.78 0.16 305);
+  --sidebar-primary: oklch(0.78 0.16 305);
+  --sidebar-ring: oklch(0.78 0.16 305);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-family-cyan: var(--family-cyan);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  }
+}
+
+/* Neon focus ring, also the keyboard-focus indicator (UX-STANDARDS §1, verbatim). */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 10px color-mix(in oklab, var(--ring) 55%, transparent);
+}

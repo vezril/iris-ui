@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      # Baked into the browser bundle at build time; the same value the Dockerfile uses.
+      NEXT_PUBLIC_IRIS_API_BASE: /api/iris
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Test
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Verify NEXT_PUBLIC_IRIS_API_BASE landed in the browser bundle
+        run: npm run verify:bundle
+
+  chart:
+    name: Helm chart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+
+      - name: helm lint
+        run: helm lint deploy/charts/iris-ui
+
+      # The trap that cost artemis-ui two releases: an empty `ingressClassName` is RFC-1123-invalid,
+      # so k8s rejects the Ingress object outright — which once silently removed a live route.
+      # `className: ""` is load-bearing on this cluster (no IngressClass resource exists and k3s's
+      # Traefik ignores named classes), so the field must be ABSENT rather than empty. A unit test
+      # can only assert the template's text; this renders it.
+      - name: Ingress omits ingressClassName when className is empty
+        run: |
+          set -euo pipefail
+          out=$(helm template t deploy/charts/iris-ui --set ingress.enabled=true)
+          echo "$out" | grep -q 'kind: Ingress' \
+            || { echo "::error::no Ingress rendered with ingress.enabled=true"; exit 1; }
+          if echo "$out" | grep -q 'ingressClassName'; then
+            echo "::error::ingressClassName present with an empty className — k8s will reject this object"
+            exit 1
+          fi
+          echo "OK: Ingress renders without ingressClassName"
+
+      - name: Ingress includes ingressClassName when className is set
+        run: |
+          set -euo pipefail
+          helm template t deploy/charts/iris-ui \
+            --set ingress.enabled=true --set ingress.className=traefik \
+            | grep -q 'ingressClassName: traefik' \
+            || { echo "::error::className set but ingressClassName missing — the guard is inverted"; exit 1; }
+          echo "OK: ingressClassName appears when className is set"
