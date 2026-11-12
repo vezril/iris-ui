@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 import { FreshnessCard, VaultFreshnessCard } from "@/components/freshness-card";
 import { HealthPill, healthState } from "@/components/health-pill";
 import { IntegrityCard } from "@/components/integrity-card";
-import { ScanOutcomeCard } from "@/components/scan-outcome-card";
 import { EmptyState, ErrorState } from "@/components/states";
 import { RESCAN_INTERVAL_MS, type BridgeMetrics } from "@/lib/iris";
 
@@ -125,21 +124,6 @@ describe("VaultFreshnessCard", () => {
     render(<VaultFreshnessCard metrics={metrics({ newestNote: new Date(observedAt.getTime() - 86_400_000) })} />);
     expect(screen.getByText("Weak signal")).toBeInTheDocument();
     expect(screen.getByText(/wedged\s+sync sidecar/)).toBeInTheDocument();
-  });
-});
-
-describe("ScanOutcomeCard", () => {
-  it("lists what the last scan did", () => {
-    render(<ScanOutcomeCard metrics={metrics()} />);
-    expect(screen.getByText("Seen on disk")).toBeInTheDocument();
-    expect(screen.getByText("Created")).toBeInTheDocument();
-    expect(screen.getByText(/not a history/)).toBeInTheDocument();
-  });
-
-  it("flags scan errors as notes missing from the index", () => {
-    render(<ScanOutcomeCard metrics={metrics({ lastScan: { ...BASE_SCAN, errors: 4 } })} />);
-    expect(screen.getByRole("status")).toHaveTextContent("4 errors");
-    expect(screen.getByText(/could not be read/)).toBeInTheDocument();
   });
 });
 

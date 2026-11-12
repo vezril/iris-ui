@@ -18,7 +18,7 @@ as plutus-ui (bank connections, not budgeting) and echo-ui (subscriptions, not v
 |---|---|---|
 | **Index vs vault** | `iris_last_scan_notes_seen` vs `iris_index_notes` | The short-index detector. A positive difference is the silent `WatchService` drop — the failure Iris has actually hit (63 notes indexed of 5,917 on first deploy). This card is why the console exists. |
 | **Last scan** | `iris_last_scan_timestamp_seconds` | The one strong liveness signal: it stops advancing iff Iris's own scanning stopped. `Stopped` uses iris-service's own alert threshold, 2× the rescan interval. |
-| **Last scan outcome** | `iris_last_scan_{created,changed,deleted,errors}` | A bad pass is visible. Errors mean notes are missing from the index. |
+| **Scan history** | `GET /scans` | The last 20 completed scans with duration and created/changed/deleted/errors. `/metrics` can only carry the latest scan, so a bad run would vanish the moment the next pass overwrote the gauges; this keeps it visible. Its first row is the same scan the *Last scan* card reports — iris-service tests that the two surfaces agree. |
 | **Unresolved links** | `GET /links/unresolved` | Vault hygiene — each one is a note Calvin meant to write, or a typo in a link. |
 | **Tags** | `GET /tags` | The shape of the vault, not its contents. |
 | **Newest note in the index** | `iris_vault_newest_note_timestamp_seconds` | Drawn deliberately as a **weak** signal (dashed, muted, labelled): a quiet week looks identical to a wedged sync sidecar, so it must not read as liveness. |
@@ -40,13 +40,15 @@ screen lies:
 on the tailnet. The browser never talks to it — only to this app's own `/api/iris/*` route handler,
 which calls the service server-side. That handler is the console's security boundary:
 
-- **A closed allowlist of four GET paths**: `health`, `metrics`, `tags`, `links/unresolved`.
-  `/notes`, `/notes/{path}`, `/notes/{path}/backlinks` and `/graph` — every route that serves note
-  text — are **unreachable through the console**. A bridge-health view needs no note bodies.
+- **A closed allowlist of five GET paths**: `health`, `metrics`, `scans`, `tags`,
+  `links/unresolved`. `/notes`, `/notes/{path}`, `/notes/{path}/backlinks` and `/graph` — every
+  route that serves note text — are **unreachable through the console**. A bridge-health view needs
+  no note bodies.
 - **GET only.** No `POST`/`PATCH` is exported, so `POST /admin/reindex` and phase 2's write and
   snapshot routes cannot be reached from here at all. The console cannot alter the service or the
   vault. ("When in doubt, read-only.")
-- **No query string is forwarded** — none of the four endpoints takes one.
+- **No query string is forwarded.** `/scans` accepts an optional `limit`; not forwarding it means
+  the console takes the service's default of 20 and the browser cannot push a parameter upstream.
 - No credentials exist to leak: the read API has no auth. If one is added, it belongs server-side
   in the BFF, never in the browser bundle.
 
@@ -56,9 +58,9 @@ running build rather than only in unit tests.
 ## Not in v1 (and why)
 
 - **Note content, editing, any vault explorer** — out of scope by design, forever.
-- **Scan history.** iris-service keeps a `scans` table but publishes only the *last completed* row
-  via `/metrics`; there is no `GET /scans`. The card therefore shows the last pass and says so,
-  rather than implying a trend from one row. A history view needs the service-side endpoint first.
+- ~~**Scan history.**~~ Shipped — `GET /scans` landed in iris-service, and the card replaced the
+  single-row "last scan outcome" tile it supersedes. **Requires iris-service > v0.3.0**; against an
+  older build the card shows a designed 404 failure rather than an empty history.
 - **A reindex button.** `POST /admin/reindex` exists, but wiring it would mean giving the BFF a
   write method. Not worth it for v1; a rescan is one `curl` away for whoever can already reach the
   service.
