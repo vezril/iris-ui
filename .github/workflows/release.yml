@@ -1,0 +1,106 @@
+name: Release
+
+# Publishes a Docker image to Docker Hub when a semver tag vX.Y.Z is pushed on main. The tag
+# pattern is the first gate: malformed tags (e.g. v1.2) never trigger this workflow. Mirrors the
+# sibling per-service UIs' release gates (apollo-ui, artemis-ui, hermes-ui).
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: read
+
+env:
+  # Docker Hub account is `calvinference`, NOT the GitHub org — the flat name has bitten deploys.
+  IMAGE_NAME: irisui
+  # Baked into the browser bundle at build time; the same relative path the Dockerfile defaults to.
+  NEXT_PUBLIC_IRIS_API_BASE: /api/iris
+
+jobs:
+  release:
+    name: Verify, build, and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for the ancestry check
+
+      # A tag must sit on main to release (prevents releasing a feature branch).
+      - name: Verify tag is on main
+        run: |
+          git fetch origin main
+          if git merge-base --is-ancestor "${{ github.sha }}" origin/main; then
+            echo "OK: ${{ github.ref_name }} is an ancestor of main"
+          else
+            echo "ERROR: tag ${{ github.ref_name }} is not on main — refusing to release"
+            exit 1
+          fi
+
+      # Fail before any build/push if credentials are absent (no partial publish).
+      - name: Ensure Docker Hub credentials are present
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ -z "$DOCKERHUB_USERNAME" ] || [ -z "$DOCKERHUB_TOKEN" ]; then
+            echo "ERROR: DOCKERHUB_USERNAME / DOCKERHUB_TOKEN secret is missing"
+            exit 1
+          fi
+
+      # Nothing is published unless the gate passes on THIS commit. The sibling UIs' release
+      # workflows skip this and lean on the Dockerfile's `next build`; that catches a broken build
+      # but not a broken test, so an image could ship with red tests. iris-service's release runs
+      # its suite first, and this follows iris-service.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Test
+        run: npm test
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Derive version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      # Semver image tags are immutable — only :latest ever moves.
+      - name: Enforce semver tag immutability
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if docker manifest inspect "$DOCKERHUB_USERNAME/$IMAGE_NAME:$VERSION" >/dev/null 2>&1; then
+            echo "ERROR: $DOCKERHUB_USERNAME/$IMAGE_NAME:$VERSION already exists — semver tags are immutable"
+            exit 1
+          fi
+          echo "OK: $VERSION is not yet published"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # The Dockerfile's builder stage runs `next build` and then scripts/verify-api-base.sh, so a
+      # failed NEXT_PUBLIC_* bake fails the image build rather than shipping a console that cannot
+      # reach its own BFF. Passed explicitly rather than relying on the Dockerfile's ARG default.
+      - name: Build and push X.Y.Z + latest
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: |
+            NEXT_PUBLIC_IRIS_API_BASE=${{ env.NEXT_PUBLIC_IRIS_API_BASE }}
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

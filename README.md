@@ -64,9 +64,11 @@ running build rather than only in unit tests.
 - **A reindex button.** `POST /admin/reindex` exists, but wiring it would mean giving the BFF a
   write method. Not worth it for v1; a rescan is one `curl` away for whoever can already reach the
   service.
-- **`release.yml`.** CI (lint/typecheck/test/build/bundle-bake + chart render) runs on PRs; the
-  tag-driven Docker Hub release workflow is not written yet, matching themis-ui. Needed before a
-  deploy, along with the `DOCKERHUB_*` secrets.
+- ~~**`release.yml`.**~~ Shipped. Pushing a `vX.Y.Z` tag on `main` verifies the gate, builds the
+  image and publishes `calvinference/irisui:X.Y.Z` + `:latest`. **Still requires the
+  `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` secrets to be set on this repo** — they are per-repo in
+  this org, not shared, and iris-ui has none yet, so the workflow fails closed at its credentials
+  check rather than half-publishing.
 
 ## Conventions
 
