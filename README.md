@@ -23,6 +23,10 @@ as plutus-ui (bank connections, not budgeting) and echo-ui (subscriptions, not v
 | **Tags** | `GET /tags` | The shape of the vault, not its contents. |
 | **Newest note in the index** | `iris_vault_newest_note_timestamp_seconds` | Drawn deliberately as a **weak** signal (dashed, muted, labelled): a quiet week looks identical to a wedged sync sidecar, so it must not read as liveness. |
 
+Three routes: `/` is the health view above, and `/links` and `/tags` are the full vault-hygiene
+lists — the dashboard cards show the most-referenced/most-used few and link through, because the
+health view should stay glanceable.
+
 Three distinctions the console is careful never to blur, because blurring them is how a health
 screen lies:
 

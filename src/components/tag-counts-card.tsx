@@ -6,10 +6,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useResource } from "@/hooks/use-resource";
 import { formatCount, type TagCount } from "@/lib/iris";
 
-const SHOWN = 15;
+const DEFAULT_SHOWN = 15;
 
-/** `GET /tags` — tag names and how many notes carry each. Shape of the vault, not its contents. */
-export function TagCountsCard() {
+/**
+ * `GET /tags` — tag names and how many notes carry each. Shape of the vault, not its contents.
+ *
+ * @param limit
+ *   how many rows to show; `null` shows every one. The dashboard passes the default; `/tags`
+ *   passes `null`.
+ */
+export function TagCountsCard({ limit = DEFAULT_SHOWN }: { limit?: number | null }) {
   const { loaded, reload } = useResource<TagCount[]>("tags", { refreshMs: 60_000 });
 
   if (loaded === undefined) {
@@ -39,7 +45,7 @@ export function TagCountsCard() {
   }
 
   const sorted = [...loaded.data].sort((a, b) => b.notes - a.notes);
-  const shown = sorted.slice(0, SHOWN);
+  const shown = limit === null ? sorted : sorted.slice(0, limit);
   const busiest = shown[0]?.notes ?? 1;
 
   return (
@@ -70,7 +76,10 @@ export function TagCountsCard() {
         </ul>
         {sorted.length > shown.length && (
           <p className="text-xs text-muted-foreground">
-            Showing the {shown.length} most-used of {formatCount(sorted.length)}.
+            Showing the {shown.length} most-used of {formatCount(sorted.length)}.{" "}
+            <a href="/tags" className="underline hover:text-foreground">
+              See all
+            </a>
           </p>
         )}
       </CardContent>
