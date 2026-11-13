@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useResource } from "@/hooks/use-resource";
 import { formatCount, type UnresolvedTarget } from "@/lib/iris";
 
-const SHOWN = 12;
+const DEFAULT_SHOWN = 12;
 
 /**
  * `GET /links/unresolved` — `[[links]]` that point at no indexed note. Genuine vault hygiene: each
@@ -14,8 +14,12 @@ const SHOWN = 12;
  *
  * Note what is NOT here: the link TARGET text only, never note bodies. The target is already a
  * link Calvin typed, and the console needs nothing more.
+ *
+ * @param limit
+ *   how many rows to show; `null` shows every one. The dashboard passes the default so the health
+ *   view stays glanceable, and `/links` passes `null` because that page exists to show the lot.
  */
-export function UnresolvedLinksCard() {
+export function UnresolvedLinksCard({ limit = DEFAULT_SHOWN }: { limit?: number | null }) {
   const { loaded, reload } = useResource<UnresolvedTarget[]>("links/unresolved", {
     refreshMs: 60_000,
   });
@@ -48,7 +52,7 @@ export function UnresolvedLinksCard() {
   }
 
   const sorted = [...loaded.data].sort((a, b) => b.referencingNotes - a.referencingNotes);
-  const shown = sorted.slice(0, SHOWN);
+  const shown = limit === null ? sorted : sorted.slice(0, limit);
 
   return (
     <Card>
@@ -72,7 +76,10 @@ export function UnresolvedLinksCard() {
         </ul>
         {sorted.length > shown.length && (
           <p className="text-xs text-muted-foreground">
-            Showing the {shown.length} most-referenced of {formatCount(sorted.length)}.
+            Showing the {shown.length} most-referenced of {formatCount(sorted.length)}.{" "}
+            <a href="/links" className="underline hover:text-foreground">
+              See all
+            </a>
           </p>
         )}
       </CardContent>
